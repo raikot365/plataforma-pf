@@ -1,0 +1,266 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+    <div class="grid-summary">
+        <div class="summary-card">
+            <div class="summary-value">{{ "%.1f"|format(totales.potencia[-1]) }} W</div>
+            <div class="summary-label">Potencia Disponible Actual</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">{{ "%.2f"|format(totales.corriente[-1]) }} A</div>
+            <div class="summary-label">Corriente Disponible Actual</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">{{ "%.1f"|format(totales.tension[-1]) }} V</div>
+            <div class="summary-label">Tensión Actual</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-value">{{ "%.2f"|format(totales.consumo_total[-1]) }} A</div>
+            <div class="summary-label">Consumo Total</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-header">
+                <h3>Potencia Disponible (W)</h3>
+                <div class="card-tools">
+                    <span class="card-tool" title="Expandir">⛶</span>
+                    <span class="card-tool" title="Más opciones">⋮</span>
+                </div>
+            </div>
+            <canvas id="chart_potencia"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Corriente Disponible (A)</h3>
+                <div class="card-tools">
+                    <span class="card-tool" title="Expandir">⛶</span>
+                    <span class="card-tool" title="Más opciones">⋮</span>
+                </div>
+            </div>
+            <canvas id="chart_corriente"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Tensión (V)</h3>
+                <div class="card-tools">
+                    <span class="card-tool" title="Expandir">⛶</span>
+                    <span class="card-tool" title="Más opciones">⋮</span>
+                </div>
+            </div>
+            <canvas id="chart_tension"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h3>Consumo Total (A)</h3>
+                <div class="card-tools">
+                    <span class="card-tool" title="Expandir">⛶</span>
+                    <span class="card-tool" title="Más opciones">⋮</span>
+                </div>
+            </div>
+            <canvas id="chart_consumo_total"></canvas>
+        </div>
+    </div>
+
+    <h2>Consumo por Nodo</h2>
+    <div class="grid">
+        {% for nodo, datos in data_por_nodo.items() %}
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ nodo }}</h3>
+                <div class="card-tools">
+                    <span class="card-tool" title="Expandir">⛶</span>
+                    <span class="card-tool" title="Más opciones">⋮</span>
+                </div>
+            </div>
+            <canvas id="chart_{{ nodo }}"></canvas>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<script>
+const chartConfig = {
+    colors: {
+        primary: ['rgba(52, 152, 219, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(231, 76, 60, 0.7)', 
+                 'rgba(241, 196, 15, 0.7)', 'rgba(155, 89, 182, 0.7)'],
+        backgrounds: ['rgba(52, 152, 219, 0.1)', 'rgba(46, 204, 113, 0.1)', 'rgba(231, 76, 60, 0.1)',
+                     'rgba(241, 196, 15, 0.1)', 'rgba(155, 89, 182, 0.1)']
+    },
+    defaultOptions: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 1.6,
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 15
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                titleColor: '#2c3e50',
+                bodyColor: '#2c3e50',
+                borderColor: 'rgba(44, 62, 80, 0.1)',
+                borderWidth: 1,
+                padding: 10,
+                boxPadding: 5
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'x'
+                },
+                zoom: {
+                    wheel: {
+                        enabled: true
+                    },
+                    pinch: {
+                        enabled: true
+                    },
+                    mode: 'x'
+                }
+            }
+        },
+        scales: {
+            x: {
+                type: 'time',
+                time: {
+                    unit: 'hour',
+                    displayFormats: {
+                        hour: 'HH:mm'
+                    }
+                },
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.05)'
+                }
+            }
+        }
+    }
+};
+
+{% for nodo, datos in data_por_nodo.items() %}
+new Chart(document.getElementById('chart_{{ nodo }}'), {
+    type: 'line',
+    data: {
+        labels: {{ datos.fechas|tojson }},
+        datasets: [{
+            label: 'Consumo (A)',
+            data: {{ datos.consumos|tojson }},
+            borderColor: chartConfig.colors.primary[{{ loop.index0 }} % chartConfig.colors.primary.length],
+            backgroundColor: chartConfig.colors.backgrounds[{{ loop.index0 }} % chartConfig.colors.backgrounds.length],
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        }]
+    },
+    options: {
+        ...chartConfig.defaultOptions,
+        plugins: {
+            ...chartConfig.defaultOptions.plugins,
+            title: {
+                display: true,
+                text: 'Consumo en tiempo real',
+                padding: {
+                    top: 10,
+                    bottom: 20
+                }
+            }
+        }
+    }
+});
+
+{% endfor %}
+
+new Chart(document.getElementById('chart_potencia'), {
+    type: 'line',
+    data: {
+        labels: {{ totales.fechas|tojson }},
+        datasets: [{
+            label: 'Potencia (W)',
+            data: {{ totales.potencia|tojson }},
+            borderColor: 'rgba(231, 76, 60, 0.7)',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        }]
+    },
+    options: chartConfig.defaultOptions
+});
+
+new Chart(document.getElementById('chart_corriente'), {
+    type: 'line',
+    data: {
+        labels: {{ totales.fechas|tojson }},
+        datasets: [{
+            label: 'Corriente (A)',
+            data: {{ totales.corriente|tojson }},
+            borderColor: 'rgba(52, 152, 219, 0.7)',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        }]
+    },
+    options: chartConfig.defaultOptions
+});
+
+new Chart(document.getElementById('chart_tension'), {
+    type: 'line',
+    data: {
+        labels: {{ totales.fechas|tojson }},
+        datasets: [{
+            label: 'Tensión (V)',
+            data: {{ totales.tension|tojson }},
+            borderColor: 'rgba(46, 204, 113, 0.7)',
+            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        }]
+    },
+    options: chartConfig.defaultOptions
+});
+
+new Chart(document.getElementById('chart_consumo_total'), {
+    type: 'line',
+    data: {
+        labels: {{ totales.fechas|tojson }},
+        datasets: [{
+            label: 'Consumo Total (A)',
+            data: {{ totales.consumo_total|tojson }},
+            borderColor: 'rgba(241, 196, 15, 0.7)',
+            backgroundColor: 'rgba(241, 196, 15, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        }]
+    },
+    options: chartConfig.defaultOptions
+});
+</script>
+{% endblock %}
