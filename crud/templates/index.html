@@ -4,169 +4,162 @@
     <div class="grid-summary">
         <div class="summary-card">
             <div class="summary-value">{{ "%.1f"|format(totales.potencia[-1]) }} W</div>
-            <div class="summary-label">Potencia Disponible Actual</div>
+            <div class="summary-label">Available Power</div>
         </div>
         <div class="summary-card">
             <div class="summary-value">{{ "%.2f"|format(totales.corriente[-1]) }} A</div>
-            <div class="summary-label">Corriente Disponible Actual</div>
+            <div class="summary-label">Available Current</div>
         </div>
         <div class="summary-card">
             <div class="summary-value">{{ "%.1f"|format(totales.tension[-1]) }} V</div>
-            <div class="summary-label">Tensión Actual</div>
+            <div class="summary-label">Actual Tension</div>
         </div>
         <div class="summary-card">
             <div class="summary-value">{{ "%.2f"|format(totales.consumo_total[-1]) }} A</div>
-            <div class="summary-label">Consumo Total</div>
+            <div class="summary-label">Total Consumption</div>
         </div>
     </div>
 
-    <div class="grid">
-        <div class="card">
-            <div class="card-header">
-                <h3>Potencia Disponible (W)</h3>
-                <div class="card-tools">
-                    <span class="card-tool" title="Expandir">⛶</span>
-                    <span class="card-tool" title="Más opciones">⋮</span>
-                </div>
-            </div>
+   <div class="grid-dashboard">
+    <!-- Izquierda: gráfico grande -->
+    <div class="card card-nodos" style="max-height:55vh;">
+        <canvas id="chart_todos_nodos"></canvas>
+    </div>
+
+    <!-- Derecha: dos gráficos apilados -->
+    <div class="right-column" style="max-height:55vh;">
+        <div class="card card-potencia">
             <canvas id="chart_potencia"></canvas>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>Corriente Disponible (A)</h3>
-                <div class="card-tools">
-                    <span class="card-tool" title="Expandir">⛶</span>
-                    <span class="card-tool" title="Más opciones">⋮</span>
-                </div>
-            </div>
-            <canvas id="chart_corriente"></canvas>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>Tensión (V)</h3>
-                <div class="card-tools">
-                    <span class="card-tool" title="Expandir">⛶</span>
-                    <span class="card-tool" title="Más opciones">⋮</span>
-                </div>
-            </div>
+        <div class="card card-tension">
             <canvas id="chart_tension"></canvas>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <h3>Consumo Total (A)</h3>
-                <div class="card-tools">
-                    <span class="card-tool" title="Expandir">⛶</span>
-                    <span class="card-tool" title="Más opciones">⋮</span>
-                </div>
-            </div>
-            <canvas id="chart_consumo_total"></canvas>
-        </div>
     </div>
+</div>
 
-    <h2>Consumo por Nodo</h2>
-    <div class="grid">
-        {% for nodo, datos in data_por_nodo.items() %}
-        <div class="card">
-            <div class="card-header">
-                <h3>{{ nodo }}</h3>
-                <div class="card-tools">
-                    <span class="card-tool" title="Expandir">⛶</span>
-                    <span class="card-tool" title="Más opciones">⋮</span>
-                </div>
+
+        <h2>Consumption per Node</h2>
+        <div class="grid">
+            {% for nodo, datos in data_por_nodo.items() %}
+            <div class="card card-nodo">
+                <canvas id="chart_{{ nodo }}"></canvas>
             </div>
-            <canvas id="chart_{{ nodo }}"></canvas>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
+
 </section>
 
 <script>
-const chartConfig = {
-    colors: {
-        primary: ['rgba(52, 152, 219, 0.7)', 'rgba(46, 204, 113, 0.7)', 'rgba(231, 76, 60, 0.7)', 
-                 'rgba(241, 196, 15, 0.7)', 'rgba(155, 89, 182, 0.7)'],
-        backgrounds: ['rgba(52, 152, 219, 0.1)', 'rgba(46, 204, 113, 0.1)', 'rgba(231, 76, 60, 0.1)',
-                     'rgba(241, 196, 15, 0.1)', 'rgba(155, 89, 182, 0.1)']
-    },
-    defaultOptions: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 1.6,
-        interaction: {
-            intersect: false,
-            mode: 'index'
+document.addEventListener("DOMContentLoaded", function () {
+
+    const chartConfig = {
+        colors: {
+            primary: ['rgba(52,152,219,0.7)', 'rgba(46,204,113,0.7)', 'rgba(231,76,60,0.7)',
+                      'rgba(241,196,15,0.7)', 'rgba(155,89,182,0.7)'],
+            backgrounds: ['rgba(52,152,219,0.1)', 'rgba(46,204,113,0.1)', 'rgba(231,76,60,0.1)',
+                          'rgba(241,196,15,0.1)', 'rgba(155,89,182,0.1)']
         },
-        plugins: {
-            legend: {
-                position: 'top',
-                labels: {
-                    usePointStyle: true,
-                    padding: 15
+        defaultOptions: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            elements: {
+                line: {
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.8
+                },
+                point: {
+                    radius: 0,
+                    hoverRadius: 0
                 }
             },
-            tooltip: {
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                titleColor: '#2c3e50',
-                bodyColor: '#2c3e50',
-                borderColor: 'rgba(44, 62, 80, 0.1)',
-                borderWidth: 1,
-                padding: 10,
-                boxPadding: 5
-            },
-            zoom: {
-                pan: {
-                    enabled: true,
-                    mode: 'x'
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, padding: 15 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    titleColor: '#2c3e50',
+                    bodyColor: '#2c3e50',
+                    borderColor: 'rgba(44,62,80,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    boxPadding: 5
                 },
                 zoom: {
-                    wheel: {
-                        enabled: true
-                    },
-                    pinch: {
-                        enabled: true
-                    },
-                    mode: 'x'
-                }
-            }
-        },
-        scales: {
-            x: {
-                type: 'time',
-                time: {
-                    unit: 'hour',
-                    displayFormats: {
-                        hour: 'HH:mm'
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x'
                     }
-                },
-                grid: {
-                    display: false
                 }
             },
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
+            scales: {
+                //versión actual
+                // x: {
+                //     type: 'time',
+                //     time: { unit: 'hour', displayFormats: { hour: 'HH:mm:ss' } },
+                //     grid: { color: 'rgba(0,0,0,0.05)' }
+                // },
+                x: {
+                        type: 'time',
+                        time: {
+                            unit: 'second',              // permite granularidad de segundos
+                            stepSize: 1,                // cada 1 segundo
+                            displayFormats: {
+                                second: 'HH:mm:ss'    // muestra hora + minutos + segundos
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            source: 'auto',
+                            autoSkip: false,             // muestra más labels
+                            maxRotation: 0,              // evita que se roten
+                            major: {
+                                enabled: true
+                            },
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
                 }
             }
         }
-    }
-};
+    };
 
-{% for nodo, datos in data_por_nodo.items() %}
-new Chart(document.getElementById('chart_{{ nodo }}'), {
+    // === Función auxiliar: crea gráfico solo si existe el canvas ===
+    function createChart(id, config) {
+        const canvas = document.getElementById(id);
+        if (!canvas) {
+            console.warn(`Canvas con id "${id}" no encontrado`);
+            return;
+        }
+        new Chart(canvas, config);
+    }
+
+
+    {% for nodo, datos in data_por_nodo.items() %}
+createChart('chart_{{ nodo }}', {
     type: 'line',
     data: {
         labels: {{ datos.fechas|tojson }},
         datasets: [{
-            label: 'Consumo (A)',
+            label: `CN{{ loop.index }} ({{ nodo }})`,
             data: {{ datos.consumos|tojson }},
             borderColor: chartConfig.colors.primary[{{ loop.index0 }} % chartConfig.colors.primary.length],
             backgroundColor: chartConfig.colors.backgrounds[{{ loop.index0 }} % chartConfig.colors.backgrounds.length],
             fill: true,
-            tension: 0.4,
             borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5
+            cubicInterpolationMode: 'monotone',
+            tension: 0.7
         }]
     },
     options: {
@@ -175,92 +168,179 @@ new Chart(document.getElementById('chart_{{ nodo }}'), {
             ...chartConfig.defaultOptions.plugins,
             title: {
                 display: true,
-                text: 'Consumo en tiempo real',
-                padding: {
-                    top: 10,
-                    bottom: 20
+                text: `CN{{ loop.index }} ({{ nodo }})`,
+                padding: { top: 6, bottom: 10 }
+            },
+            legend: {
+                display: true,    // mostramos leyenda abajo
+                position: 'bottom',
+                labels: { usePointStyle: true, padding: 8, font: { size: 11 } }
+            }
+        },
+        scales: {
+            ...chartConfig.defaultOptions.scales,
+            y: {
+                beginAtZero: true,
+                min: 0,
+                max: 10,
+                title: {
+                    display: true,
+                    text: 'Current (A)',
+                    padding: { top: 5, bottom: 0 }
                 }
             }
         }
-    }
+    },
+    plugins: [{
+        id: 'priorityLabel',
+        beforeDraw(chart) {
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.font = '12px sans-serif';
+            ctx.fillStyle = '#555';
+            ctx.textAlign = 'right';
+            ctx.fillText('P={{ datos.prioridad }}', chart.width - 10, 18);
+            ctx.restore();
+        }
+    }]
 });
-
 {% endfor %}
 
-new Chart(document.getElementById('chart_potencia'), {
-    type: 'line',
-    data: {
-        labels: {{ totales.fechas|tojson }},
-        datasets: [{
-            label: 'Potencia (W)',
-            data: {{ totales.potencia|tojson }},
-            borderColor: 'rgba(231, 76, 60, 0.7)',
-            backgroundColor: 'rgba(231, 76, 60, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5
-        }]
-    },
-    options: chartConfig.defaultOptions
-});
+   
+    // === Gráfico de Potencia ===
+    createChart('chart_potencia', {
+        type: 'line',
+        data: {
+            labels: {{ totales.fechas|tojson }},
+            datasets: [{
+                label: 'Microgrid Available Power',
+                data: {{ totales.potencia|tojson }},
+                borderColor: 'rgba(231,76,60,0.7)',
+                backgroundColor: 'rgba(231,76,60,0.1)',
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: { ...chartConfig.defaultOptions, aspectRatio: 3,
+            scales: {
+                ...chartConfig.defaultOptions.scales,
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Power (W)',
+                        padding: { top: 5, bottom: 0 }
+                    }
+                }
+            }
+        }
+    });
 
-new Chart(document.getElementById('chart_corriente'), {
-    type: 'line',
-    data: {
-        labels: {{ totales.fechas|tojson }},
-        datasets: [{
-            label: 'Corriente (A)',
-            data: {{ totales.corriente|tojson }},
-            borderColor: 'rgba(52, 152, 219, 0.7)',
-            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5
-        }]
-    },
-    options: chartConfig.defaultOptions
-});
+    // === Gráfico de Tensión ===
+    createChart('chart_tension', {
+        type: 'line',
+        data: {
+            labels: {{ totales.fechas|tojson }},
+            datasets: [{
+                label: 'RMS Alternating Voltage',
+                data: {{ totales.tension|tojson }},
+                borderColor: 'rgba(46,204,113,0.7)',
+                backgroundColor: 'rgba(46,204,113,0.1)',
+                fill: true,
+                borderWidth: 2
+            }]
+        },
+        options: { ...chartConfig.defaultOptions, aspectRatio: 3, 
+            scales: {
+                ...chartConfig.defaultOptions.scales,
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Tension (V)',
+                        padding: { top: 5, bottom: 0 }
+                    }
+                }
+            }
+        }
+    });
 
-new Chart(document.getElementById('chart_tension'), {
-    type: 'line',
-    data: {
-        labels: {{ totales.fechas|tojson }},
-        datasets: [{
-            label: 'Tensión (V)',
-            data: {{ totales.tension|tojson }},
-            borderColor: 'rgba(46, 204, 113, 0.7)',
-            backgroundColor: 'rgba(46, 204, 113, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5
-        }]
-    },
-    options: chartConfig.defaultOptions
-});
 
-new Chart(document.getElementById('chart_consumo_total'), {
-    type: 'line',
-    data: {
-        labels: {{ totales.fechas|tojson }},
-        datasets: [{
-            label: 'Consumo Total (A)',
-            data: {{ totales.consumo_total|tojson }},
-            borderColor: 'rgba(241, 196, 15, 0.7)',
-            backgroundColor: 'rgba(241, 196, 15, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointHoverRadius: 5
-        }]
-    },
-    options: chartConfig.defaultOptions
+    // === Gráfico con todos los nodos + Consumo Total + Corriente Disponible ===
+    const dataNodos = {{ data_por_nodo|tojson }};
+    const allLabels = Object.values(dataNodos)[0].fechas;
+
+    // datasets de cada nodo
+    const datasetsNodos = Object.entries(dataNodos).map(([nodo, datos], idx) => ({
+        label: `CN${idx + 1} (P${datos.prioridad})`,
+        data: datos.consumos,
+        borderColor: chartConfig.colors.primary[idx % chartConfig.colors.primary.length],
+        backgroundColor: chartConfig.colors.backgrounds[idx % chartConfig.colors.backgrounds.length],
+        fill: false,
+        borderWidth: 2,
+        cubicInterpolationMode: 'monotone',
+        tension: 0.7
+    }));
+
+    // dataset adicional con consumo total
+    datasetsNodos.push({
+        label: 'Total Consumption',
+        data: {{ totales.consumo_total|tojson }},
+        borderColor: 'rgba(231, 76, 60, 0.9)',         // rojo fuerte
+        backgroundColor: 'rgba(231, 76, 60, 0.15)',
+        borderWidth: 3,
+        fill: false,
+        cubicInterpolationMode: 'monotone',
+        tension: 0.6,
+        borderDash: [5, 5]                             // línea punteada para diferenciarlo
+    });
+
+    // dataset adicional con corriente disponible
+    datasetsNodos.push({
+        label: 'Available Current',
+        data: {{ totales.corriente|tojson }},
+        borderColor: 'rgba(0, 184, 148, 0.9)',    // verde-azulado brillante
+        backgroundColor: 'rgba(46, 204, 113, 0.15)',
+        borderWidth: 2.5,
+        fill: false,
+        cubicInterpolationMode: 'monotone',
+        tension: 0.6,
+        borderDash: [4, 4]                             // estilo de línea diferente
+    });
+
+    // creación del gráfico
+    createChart('chart_todos_nodos', {
+        type: 'line',
+        data: {
+            labels: {{ totales.fechas|tojson }},
+            datasets: datasetsNodos
+        },
+        options: {
+            ...chartConfig.defaultOptions,
+            plugins: {
+                ...chartConfig.defaultOptions.plugins,
+                title: {
+                    display: true,
+                    text: 'Individual, Total Consumption and Available Current',
+                    padding: { top: 10, bottom: 20 }
+                }
+            },
+            scales: {
+                ...chartConfig.defaultOptions.scales,
+                y: {
+                    beginAtZero: true,
+                    min: 0, // si se comentan estos dos valores, se ajusta automáticamente (llega a 25 A)
+                    max: 25,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    title: {
+                        display: true,
+                        text: 'Current (A)',
+                        padding: { top: 10, bottom: 0 }
+                    }
+                }
+            }
+        }
+    });
 });
 </script>
 {% endblock %}

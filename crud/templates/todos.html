@@ -1,0 +1,198 @@
+<!doctype html><html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard Microrred</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h1 { font-size: 22px; margin-bottom: 10px; }
+    p { font-size: 15px; margin: 5px 0; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 1px solid #ccc;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    th {
+      background-color: #e0e0e0;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+    #chart-container {
+      width: 100%;
+      height: 400px;
+    }
+    canvas {
+      width: 100% !important;
+      height: 400px !important;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Gestión de consumos en la Microrred</h1>
+  <p>Corriente Disponible (AC): <span id="avail">–</span> A</p>
+  <p>Corriente Total (suma de NC): <span id="total">–</span> A</p>
+
+  <table id="nodes">
+    <tr><th>Nodo de Consumo</th><th>Dirección MAC</th><th>Corriente (A)</th><th>Prioridad</th><th>Último mensaje (ms)</th></tr>
+  </table>
+
+  <div id="chart-container">
+    <canvas id="chart"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+const historyLength = 600;
+const staleTimeoutMs = 2000;
+const labels = [];
+const datasets = {};
+const totalDataKey = "__TOTAL__";
+const availDataKey = "__AVAIL__";
+let chart = null;
+
+const macToLabel = {};
+let nextNcIndex = 1;
+
+function formatMacShort(mac) {
+  const parts = mac.split(':').map(s => s.toUpperCase().padStart(2,'0'));
+  return parts.slice(-3).join(':');
+}
+function getLabelForMac(mac) {
+  if (macToLabel[mac]) return macToLabel[mac];
+  const short = formatMacShort(mac);
+  const label = `NC${nextNcIndex} (${short})`;
+  macToLabel[mac] = label;
+  nextNcIndex++;
+  return label;
+}
+function ensureDataset(key, meta, fillValue = 0) {
+  if (datasets[key]) return datasets[key];
+  const initialData = new Array(labels.length).fill(fillValue);
+  const ds = Object.assign({ data: initialData }, meta);
+  datasets[key] = ds;
+  if (chart) chart.data.datasets.push(ds);
+  return ds;
+}
+function initChartIfNeeded() {
+  if (chart) return;
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      elements: { point: { radius: 0 } },
+      scales: {
+        x: { title: { display: true, text: 'Tiempo (s)' }, grid: { color: '#ddd' } },
+        y: { title: { display: true, text: 'Corriente (A)' }, grid: { color: '#ddd' }, min: 0 }
+      }
+    }
+  });
+  ensureDataset(totalDataKey, {
+    label: "Total",
+    borderColor: "#000000",
+    borderWidth: 2,
+    fill: false
+  }, 0);
+  ensureDataset(availDataKey, {
+    label: "Disponibilidad",
+    borderColor: "#FF0000",
+    borderDash: [5,5],
+    fill: false
+  }, null);
+}
+
+async function refresh() {
+  try {
+    initChartIfNeeded();
+    const resp = await fetch('/data');
+    if (!resp.ok) return;
+    const j = await resp.json();
+
+    const now = new Date().toLocaleTimeString();
+    labels.push(now);
+    if (labels.length > historyLength) labels.shift();
+
+    document.getElementById('avail').textContent = j.availableCurrent.toFixed(3);
+
+    const nodeMap = {};
+    j.nodes.forEach(n => {
+      const eff = (n.age > staleTimeoutMs) ? 0 : n.current;
+      nodeMap[n.mac] = eff;
+    });
+
+    const tbl = document.getElementById('nodes');
+    tbl.innerHTML = '<tr><th>Nodo de Consumo</th><th>Dirección MAC</th><th>Corriente (A)</th><th>Prioridad</th><th>Último mensaje (ms)</th></tr>';
+    j.nodes.forEach(n => {
+      const isStale = (n.age > staleTimeoutMs);
+      const short = formatMacShort(n.mac);
+      const label = getLabelForMac(n.mac);
+      const staleMark = isStale ? ' <strong style="color:#b00">(Sin Datos)</strong>' : '';
+      tbl.innerHTML += `<tr>
+        <td>${label.split(' ')[0]}</td>
+        <td>${short}</td>
+        <td>${n.current.toFixed(3)}${staleMark}</td>
+        <td>${n.priority}</td>
+        <td>${n.age}</td>
+      </tr>`;
+      if (!datasets[n.mac]) {
+        const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+        ensureDataset(n.mac, {
+          label: getLabelForMac(n.mac),
+          borderColor: color,
+          fill: false
+        }, 0);
+      }
+    });
+
+    ensureDataset(totalDataKey, { label: "Total", borderColor: "#000000", borderWidth: 2, fill: false }, 0);
+    ensureDataset(availDataKey, { label: "Disponibilidad", borderColor: "#FF0000", borderDash: [5,5], fill: false }, null);
+
+    for (const key in datasets) {
+      if (key === totalDataKey) datasets[key].data.push(j.totalCurrent);
+      else if (key === availDataKey) datasets[key].data.push(j.availableCurrent);
+      else datasets[key].data.push(nodeMap[key] || 0);
+      if (datasets[key].data.length > historyLength) datasets[key].data.shift();
+    }
+
+    document.getElementById('total').textContent = j.totalCurrent.toFixed(3);
+    chart.data.labels = labels;
+    chart.update();
+  } catch (e) { console.error(e); }
+}
+setInterval(refresh, 1000);
+window.addEventListener('load', () => {
+  initChartIfNeeded();
+  setTimeout(refresh, 200);
+});
+</script>
+</body>
+</html>

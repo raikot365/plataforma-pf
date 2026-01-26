@@ -535,3 +535,139 @@ body.dark-theme .top-bar {
         margin-right: 0.5rem;
     }
 }
+
+.grid-dashboard {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* izquierda más ancha (gráfico grande), derecha más angosta */
+    gap: 1.5rem;
+    align-items: stretch;
+    transition: all 0.4s ease;
+}
+
+/* Columna derecha (potencia y tensión apiladas) */
+.right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Los dos gráficos derechos comparten altura total */
+.card-potencia,
+.card-tension {
+    flex: 1; /* cada uno ocupa la mitad del alto disponible */
+    height: auto;
+}
+
+/* Gráfico grande a la izquierda */
+.card-nodos {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+/* === Estilo común de las cards === */
+.card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden; /* evita que el canvas se desborde */
+    transition: all 0.3s ease;
+}
+
+/* Ajuste para que el canvas use todo el espacio de la card */
+.card canvas {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+}
+
+/* Transición suave del grid al redimensionar o mostrar sidebar */
+.grid-dashboard {
+    transition: all 0.4s ease;
+}
+
+/* === Responsividad === */
+@media (max-width: 992px) {
+    .grid-dashboard {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        grid-template-areas:
+            "comparativa"
+            "nodos"
+            "potencia"
+            "tension";
+    }
+
+    .card-comparativa,
+    .card-nodos,
+    .card-potencia,
+    .card-tension {
+        height: 300px;
+    }
+}
+
+/* para los nodos individuales*/
+/* === Contenedor general de los gráficos por nodo === */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); /* antes 400 o 500 */
+    gap: 1rem; /* separa un poco más las cards */
+    width: 100%;
+}
+
+
+/* === Cards de los gráficos por nodo === */
+.card-nodo {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 320px; /* formato más ancho */
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+/* Canvas ocupa toda la card */
+.card-nodo canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr; /* una columna */
+        gap: 1rem; /* menos espacio entre cards */
+    }
+
+    .card {
+        height: 240px; /* más chicas */
+        padding: 0.8rem;
+    }
+
+    /* Reducir tamaño del título en móviles pequeños */
+    .app-header h1 {
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 65%; /* evita solapamiento con botones */
+    }
+
+    /* Ajustes menores para los botones del header en pantallas pequeñas */
+    .btn-menu {
+        margin-right: 0.25rem;
+    }
+    .header-tools .btn-theme {
+        font-size: 1rem;
+    }
+}
