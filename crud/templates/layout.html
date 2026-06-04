@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title if title else "Energy Panel" }}</title>
+    <title>{{ title if title else "Energy Dashboard" }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">  dejo comentado porque genera conflicto
-     con la ruta /statuc de swag-->
+    
     <link rel="stylesheet" href="/crud/static/css/styles.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,23 +16,137 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+    
+    <style>
+        :root {
+            --header-height: 60px;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 1000;
+            box-sizing: border-box;
+            /* Asegúrate de que el color de fondo sea sólido aquí */
+        }
+
+        /* CENTRADO PERFECTO DEL TÍTULO */
+        .app-header h1 {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            font-size: 1.25rem;
+            white-space: nowrap;
+            pointer-events: none; /* Evita que el h1 bloquee clics en botones cercanos si creciera mucho */
+        }
+
+        .header-tools {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto; /* Empuja los botones a la derecha */
+            z-index: 1001;
+        }
+
+        .btn-menu {
+            z-index: 1001; /* Mantiene el botón de hamburguesa por encima */
+        }
+
+        /* ELIMINACIÓN DEL GAP EN LA SIDEBAR */
+        .sidebar {
+            position: fixed;
+            top: var(--header-height); /* Empieza exactamente después del header */
+            left: 0;
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--header-height));
+            z-index: 999;
+            margin: 0;
+            border-right: 1px solid rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        /* Ajuste para cuando el sidebar está oculto */
+        .sidebar-hidden .sidebar {
+            transform: translateX(-100%);
+        }
+
+        /* Main debe respetar el espacio del sidebar si no está oculto */
+        main {
+            padding: 10px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar-hidden main {
+            margin-left: 0;
+        }
+
+        /* Botones con estilo profesional */
+        .btn-nav {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .btn-refresh svg {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-refresh:hover svg {
+            transform: rotate(180deg);
+        }
+    </style>
+
     <script>
         if (window.Chart && window['chartjs-plugin-zoom']) {
             Chart.register(window['chartjs-plugin-zoom']);
         }
     </script>
-
 </head>
 <body class="sidebar-hidden">
+
     <header class="app-header">
         <button class="btn-menu" onclick="toggleSidebar()">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12h18M3 6h18M3 18h18"></path>
             </svg>
         </button>
-        <h1>Energy Monitoring Panel</h1>
+        
+        <h1>Microgrid Energy Consumption Dashboard</h1>
+        
         <div class="header-tools">
-            <button class="btn-theme" onclick="toggleTheme()">🌙</button>
+            <button class="btn-nav btn-refresh" onclick="location.reload()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Update</span>
+            </button>
+
+            <button class="btn-nav btn-theme" onclick="toggleTheme()" title="Cambiar Tema">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+            </button>
         </div>
     </header>
     
@@ -51,7 +163,7 @@
                     <label for="show-tooltips">Show tooltips</label>
                 </div>
                 <div class="control-item">
-                    <input type="checkbox" id="animate-charts" checked>
+                    <input type="checkbox" id="animate-charts">
                     <label for="animate-charts">Interaction</label>
                 </div>
             </div>
@@ -59,8 +171,6 @@
         <div class="sidebar-section">
             <h3 class="sidebar-title">Graphics Visibility</h3>
             <div class="control-group charts-visibility">
-
-                <!-- Globales -->
                 <div class="control-item">
                     <input type="checkbox" id="show-todos_nodos" checked>
                     <label for="show-todos_nodos">All</label>
@@ -73,10 +183,7 @@
                     <input type="checkbox" id="show-tension" checked>
                     <label for="show-tension">Tension</label>
                 </div>
-
                 <hr>
-
-                <!-- Nodos individuales -->
                 {% for nodo in data_por_nodo.keys() %}
                 <div class="control-item">
                     <input type="checkbox" id="show-{{ nodo }}" class="checkbox-nodo" checked>
@@ -85,32 +192,18 @@
                 {% endfor %}
             </div>
         </div>
-
     </aside>
 
     <main>
-        <div class="top-bar">
-            <!-- <select id="time-range">
-                <option value="1h">Última hora</option>
-                <option value="24h" selected>Últimas 24 horas</option>
-                <option value="7d">Última semana</option>
-                <option value="30d">Último mes</option>
-            </select> -->
-            <button class="btn-refresh">Update data</button>
-        </div>
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Overlay para el sidebar en móvil -->
     <div class="overlay" onclick="toggleSidebar()"></div>
 
-    <!-- Script JS principal -->
-     <script>
-    // Estas dos líneas deben ir en el template Jinja *antes* de cargar main.js
-    const DATA_POR_NODO = {{ data_por_nodo|tojson }};
-    const TOTALES = {{ totales|tojson }};
+    <script>
+        const DATA_POR_NODO = {{ data_por_nodo|tojson }};
+        const TOTALES = {{ totales|tojson }};
     </script>
-    <!-- <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script> -->
     <script src="/crud/static/js/main.js"></script>
 </body>
 </html>

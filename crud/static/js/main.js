@@ -45,6 +45,19 @@ window.addEventListener('load', () => {
 		});
 	});
 
+    // Apply initial state for interaction based on checkbox
+    if (anim && !anim.checked) {
+        charts.forEach(c => {
+            const zoom = c.options.plugins.zoom;
+            if (zoom) {
+                zoom.zoom.wheel.enabled = false;
+                zoom.zoom.pinch.enabled = false;
+                zoom.pan.enabled = false;
+                c.update();
+            }
+        });
+    }
+
     // Mostrar/ocultar gráficos desde los checkboxes 
     document.querySelectorAll('.charts-visibility input').forEach(checkbox => {
         checkbox.addEventListener('change', function() {

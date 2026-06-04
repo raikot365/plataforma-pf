@@ -12,7 +12,7 @@
         </div>
         <div class="summary-card">
             <div class="summary-value">{{ "%.1f"|format(totales.tension[-1]) }} V</div>
-            <div class="summary-label">Actual Tension</div>
+            <div class="summary-label">AC RMS Voltage</div>
         </div>
         <div class="summary-card">
             <div class="summary-value">{{ "%.2f"|format(totales.consumo_total[-1]) }} A</div>
@@ -242,7 +242,7 @@ createChart('chart_{{ nodo }}', {
         data: {
             labels: {{ totales.fechas|tojson }},
             datasets: [{
-                label: 'RMS Alternating Voltage',
+                label: 'AC RMS Voltage',
                 data: {{ totales.tension|tojson }},
                 borderColor: 'rgba(46,204,113,0.7)',
                 backgroundColor: 'rgba(46,204,113,0.1)',
@@ -257,7 +257,7 @@ createChart('chart_{{ nodo }}', {
                     beginAtZero: false,
                     title: {
                         display: true,
-                        text: 'Tension (V)',
+                        text: 'Voltage (V)',
                         padding: { top: 5, bottom: 0 }
                     }
                 }
