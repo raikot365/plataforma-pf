@@ -6,9 +6,13 @@ services:
       - PUID=1000
       - PGID=1000
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DB}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_USER_PASS}
       - TZ=America/Argentina/Buenos_Aires
     volumes:
-      - ./mariadb:/config
+      - ./mariadb:/var/lib/mysql
+      - ./mariadb-init/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - 3306:3306
     restart: unless-stopped
@@ -18,9 +22,8 @@ services:
     restart: always
     environment:
       - PMA_HOST=mariadb
-      - PMA_ABSOLUTE_URI=https://${DOMINIO}:${PUERTO}/phpmyadmin/
     ports:
-      - 8080:80
+      - 8081:80
     depends_on:
       - mariadb
   clientemqtt:
@@ -50,33 +53,12 @@ services:
     user: "1000:1000"
     ports:
       - 1883:1883
-      - ${PUERTO_MQTTS}:8883
     restart: unless-stopped
     volumes:
       - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/config:/mosquitto/config
-      - ./swag/etc/letsencrypt:/var/tmp
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
-  swag:
-    image: lscr.io/linuxserver/swag:latest
-    container_name: swagPF
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Argentina/Buenos_Aires
-      - URL=${DOMINIO}
-      - VALIDATION=dns
-      - DNSPLUGIN=duckdns
-      - SUBDOMAINS=
-    volumes:
-      - ./swag:/config
-    ports:
-      - ${PUERTO}:443/tcp
-      - 80:80
-    restart: unless-stopped
+  
   crud:
     build:
       context: ./crud    # ruta donde está el Dockerfile y el script Python

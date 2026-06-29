@@ -1,21 +1,27 @@
 {% extends "layout.html" %}
 {% block content %}
 <section class="dashboard">
+    {% if not totales.fechas %}
+    <div class="alert-info" style="padding: 15px; margin-bottom: 20px; background-color: rgba(52, 152, 219, 0.1); color: #2c3e50; border: 1px solid rgba(52, 152, 219, 0.3); border-radius: 6px; font-family: 'Inter', sans-serif;">
+        <strong>No data available yet:</strong> The database is currently empty. Start publishing MQTT messages to populate the dashboard!
+    </div>
+    {% endif %}
+
     <div class="grid-summary">
         <div class="summary-card">
-            <div class="summary-value">{{ "%.1f"|format(totales.potencia[-1]) }} W</div>
+            <div class="summary-value">{{ "%.1f"|format(totales.potencia[-1].y) if totales.potencia else "0.0" }} W</div>
             <div class="summary-label">Available Power</div>
         </div>
         <div class="summary-card">
-            <div class="summary-value">{{ "%.2f"|format(totales.corriente[-1]) }} A</div>
+            <div class="summary-value">{{ "%.2f"|format(totales.corriente[-1].y) if totales.corriente else "0.00" }} A</div>
             <div class="summary-label">Available Current</div>
         </div>
         <div class="summary-card">
-            <div class="summary-value">{{ "%.1f"|format(totales.tension[-1]) }} V</div>
+            <div class="summary-value">{{ "%.1f"|format(totales.tension[-1].y) if totales.tension else "0.0" }} V</div>
             <div class="summary-label">AC RMS Voltage</div>
         </div>
         <div class="summary-card">
-            <div class="summary-value">{{ "%.2f"|format(totales.consumo_total[-1]) }} A</div>
+            <div class="summary-value">{{ "%.2f"|format(totales.consumo_total[-1].y) if totales.consumo_total else "0.00" }} A</div>
             <div class="summary-label">Total Consumption</div>
         </div>
     </div>
@@ -150,10 +156,9 @@ document.addEventListener("DOMContentLoaded", function () {
 createChart('chart_{{ nodo }}', {
     type: 'line',
     data: {
-        labels: {{ datos.fechas|tojson }},
         datasets: [{
             label: `CN{{ loop.index }} ({{ nodo }})`,
-            data: {{ datos.consumos|tojson }},
+            data: {{ datos.puntos|tojson }},
             borderColor: chartConfig.colors.primary[{{ loop.index0 }} % chartConfig.colors.primary.length],
             backgroundColor: chartConfig.colors.backgrounds[{{ loop.index0 }} % chartConfig.colors.backgrounds.length],
             fill: true,
@@ -211,7 +216,6 @@ createChart('chart_{{ nodo }}', {
     createChart('chart_potencia', {
         type: 'line',
         data: {
-            labels: {{ totales.fechas|tojson }},
             datasets: [{
                 label: 'Microgrid Available Power',
                 data: {{ totales.potencia|tojson }},
@@ -240,7 +244,6 @@ createChart('chart_{{ nodo }}', {
     createChart('chart_tension', {
         type: 'line',
         data: {
-            labels: {{ totales.fechas|tojson }},
             datasets: [{
                 label: 'AC RMS Voltage',
                 data: {{ totales.tension|tojson }},
@@ -268,12 +271,11 @@ createChart('chart_{{ nodo }}', {
 
     // === Gráfico con todos los nodos + Consumo Total + Corriente Disponible ===
     const dataNodos = {{ data_por_nodo|tojson }};
-    const allLabels = Object.values(dataNodos)[0].fechas;
 
     // datasets de cada nodo
     const datasetsNodos = Object.entries(dataNodos).map(([nodo, datos], idx) => ({
         label: `CN${idx + 1} (P${datos.prioridad})`,
-        data: datos.consumos,
+        data: datos.puntos,
         borderColor: chartConfig.colors.primary[idx % chartConfig.colors.primary.length],
         backgroundColor: chartConfig.colors.backgrounds[idx % chartConfig.colors.backgrounds.length],
         fill: false,
@@ -312,7 +314,6 @@ createChart('chart_{{ nodo }}', {
     createChart('chart_todos_nodos', {
         type: 'line',
         data: {
-            labels: {{ totales.fechas|tojson }},
             datasets: datasetsNodos
         },
         options: {

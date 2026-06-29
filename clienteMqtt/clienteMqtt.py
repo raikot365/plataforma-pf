@@ -21,18 +21,28 @@ async def guardar_en_db(sql, valores):
         logging.error(traceback.format_exc())
 
 async def main():
-    tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    tls_context.verify_mode = ssl.CERT_REQUIRED
-    tls_context.check_hostname = True
-    tls_context.load_default_certs()
+    port = int(os.environ.get("PUERTO_MQTTS", "1883"))
 
-    async with aiomqtt.Client(
-        os.environ["SERVIDOR"],
-        username=os.environ["MQTT_USR"],
-        password=os.environ["MQTT_PASS"],
-        port=int(os.environ["PUERTO_MQTTS"]),
-        tls_context=tls_context,
-    ) as client:
+    # Use TLS for non-default ports; fall back to plain TCP for local testing on 1883
+    tls_context = None
+    if port != 1883:
+        tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        tls_context.verify_mode = ssl.CERT_REQUIRED
+        tls_context.check_hostname = True
+        tls_context.load_default_certs()
+
+    client_kwargs = {
+        "hostname": os.environ["SERVIDOR"],
+        "port": port,
+    }
+    if os.environ.get("MQTT_USR"):
+        client_kwargs["username"] = os.environ.get("MQTT_USR")
+    if os.environ.get("MQTT_PASS"):
+        client_kwargs["password"] = os.environ.get("MQTT_PASS")
+    if tls_context:
+        client_kwargs["tls_context"] = tls_context
+
+    async with aiomqtt.Client(**client_kwargs) as client:
 
         topico1 = os.environ.get('TOPICO1', 'consumos')
         topico2 = os.environ.get('TOPICO2', 'totales')

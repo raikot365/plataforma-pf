@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="/crud/static/css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
@@ -134,6 +134,24 @@
         <h1>Microgrid Energy Consumption Dashboard</h1>
         
         <div class="header-tools">
+            <!-- Time Window Selector -->
+            <select id="time-window-select" class="btn-nav" style="background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.2); outline: none; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-family: inherit; font-size: 13px;">
+                <option value="all" style="color: black;">All Data</option>
+                <option value="5m" style="color: black;">Last 5 mins</option>
+                <option value="15m" style="color: black;">Last 15 mins</option>
+                <option value="1h" style="color: black;">Last 1 hour</option>
+                <option value="24h" style="color: black;">Last 24 hours</option>
+            </select>
+
+            <!-- Auto Refresh Selector -->
+            <select id="auto-refresh-select" class="btn-nav" style="background: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.2); outline: none; cursor: pointer; padding: 6px 12px; border-radius: 6px; font-family: inherit; font-size: 13px;">
+                <option value="off" style="color: black;">Refresh: Off</option>
+                <option value="10" style="color: black;">Refresh: 10s</option>
+                <option value="30" style="color: black;">Refresh: 30s</option>
+                <option value="60" style="color: black;">Refresh: 1m</option>
+                <option value="300" style="color: black;">Refresh: 5m</option>
+            </select>
+
             <button class="btn-nav btn-refresh" onclick="location.reload()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M23 4v6h-6"></path>
@@ -203,7 +221,39 @@
     <script>
         const DATA_POR_NODO = {{ data_por_nodo|tojson }};
         const TOTALES = {{ totales|tojson }};
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            const currentWindow = urlParams.get('window') || 'all';
+            const currentRefresh = urlParams.get('refresh') || 'off';
+            
+            const windowSelect = document.getElementById('time-window-select');
+            const refreshSelect = document.getElementById('auto-refresh-select');
+            
+            if (windowSelect) windowSelect.value = currentWindow;
+            if (refreshSelect) refreshSelect.value = currentRefresh;
+            
+            windowSelect?.addEventListener('change', function () {
+                urlParams.set('window', this.value);
+                window.location.search = urlParams.toString();
+            });
+            
+            refreshSelect?.addEventListener('change', function () {
+                urlParams.set('refresh', this.value);
+                window.location.search = urlParams.toString();
+            });
+            
+            if (currentRefresh !== 'off') {
+                const intervalMs = parseInt(currentRefresh) * 1000;
+                if (!isNaN(intervalMs) && intervalMs > 0) {
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, intervalMs);
+                }
+            }
+        });
     </script>
-    <script src="/crud/static/js/main.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
